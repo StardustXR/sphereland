@@ -1,11 +1,11 @@
 [package]
-name = "flatland"
+name = "sphereland"
 version = "0.8.0"
 edition = "2021"
 authors = ["Nova King <technobaboo@proton.me>"]
 description = "Flat panel UI client for Stardust XR like SimulaVR or xrdesktop"
 license = "MIT"
-repository = "https://github.com/StardustXR/flatland/"
+repository = "https://github.com/StardustXR/sphereland/"
 homepage = "https://stardustxr.org"
 
 [dependencies]

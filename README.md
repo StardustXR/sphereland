@@ -1,2 +1,3 @@
-# flatland-stardust
-Flatland but for Stardust :3
+# sphereland
+
+Pointer/keyboard operated "window manager" for stardust.

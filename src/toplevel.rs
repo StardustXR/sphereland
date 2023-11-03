@@ -1,25 +1,20 @@
-use std::f32::consts::PI;
-
-use crate::{
-	close_button::CloseButton, panel_shell_grab_ball::PanelShellGrabBall, surface::Surface,
-};
+use crate::surface::Surface;
 use glam::{vec3, Quat, Vec3};
 use rustc_hash::FxHashMap;
 use stardust_xr_fusion::{
 	client::{Client, FrameInfo},
 	core::values::Transform,
 	drawable::{Alignment, Text, TextStyle},
-	fields::UnknownField,
-	items::{
-		panel::{ChildInfo, Geometry, PanelItem, PanelItemHandler, PanelItemInitData, SurfaceID},
-		ItemAcceptor,
+	items::panel::{
+		ChildInfo, Geometry, PanelItem, PanelItemHandler, PanelItemInitData, SurfaceID,
 	},
 	node::{NodeError, NodeType},
 	spatial::Spatial,
 };
 use stardust_xr_molecules::{Grabbable, GrabbableSettings, PointerMode};
+use std::f32::consts::PI;
 
-pub const TOPLEVEL_THICKNESS: f32 = 0.025;
+pub const TOPLEVEL_THICKNESS: f32 = 0.005;
 pub const CHILD_THICKNESS: f32 = 0.005;
 
 pub struct Toplevel {
@@ -30,8 +25,6 @@ pub struct Toplevel {
 	title: Option<String>,
 	app_id: Option<String>,
 	children: FxHashMap<String, Surface>,
-	panel_shell_grab_ball: PanelShellGrabBall,
-	close_button: CloseButton,
 }
 impl Toplevel {
 	pub fn create(item: PanelItem, data: PanelItemInitData) -> Result<Self, NodeError> {
@@ -86,21 +79,6 @@ impl Toplevel {
 		)
 		.unwrap();
 
-		let panel_shell_grab_ball_anchor = Spatial::create(
-			&item,
-			Transform::from_position([0.0, -surface.physical_size().y * 0.5, 0.0]),
-			false,
-		)
-		.unwrap();
-		let panel_shell_grab_ball = PanelShellGrabBall::create(
-			panel_shell_grab_ball_anchor,
-			[0.0, -0.02, 0.0],
-			item.alias(),
-		)
-		.unwrap();
-		let close_button =
-			CloseButton::new(item.alias(), TOPLEVEL_THICKNESS, surface.physical_size())?;
-
 		Ok(Toplevel {
 			_item: item,
 			surface,
@@ -109,8 +87,6 @@ impl Toplevel {
 			title: data.toplevel.title.clone(),
 			app_id: data.toplevel.app_id.clone(),
 			children: FxHashMap::default(),
-			panel_shell_grab_ball,
-			close_button,
 		})
 	}
 
@@ -138,14 +114,8 @@ impl Toplevel {
 		Ok(())
 	}
 
-	pub fn update(
-		&mut self,
-		info: &FrameInfo,
-		acceptors: &FxHashMap<String, (ItemAcceptor<PanelItem>, UnknownField)>,
-	) {
-		self.close_button.update(info);
+	pub fn update(&mut self, info: &FrameInfo) {
 		self.grabbable.update(info).unwrap();
-		self.panel_shell_grab_ball.update(acceptors);
 		if !self.grabbable.grab_action().actor_acting() {
 			self.surface.update();
 			for popup in self.children.values_mut() {
@@ -177,13 +147,11 @@ impl Toplevel {
 
 	pub fn set_enabled(&mut self, enabled: bool) {
 		let _ = self.grabbable.set_enabled(enabled);
-		let _ = self.panel_shell_grab_ball.set_enabled(enabled);
 		for child in self.children.values_mut() {
 			child.set_enabled(enabled);
 		}
 		self.surface.set_enabled(enabled);
 		let _ = self.title_text.set_enabled(enabled);
-		let _ = self.close_button.set_enabled(enabled);
 	}
 }
 
@@ -209,11 +177,6 @@ impl PanelItemHandler for Toplevel {
 				],
 			)
 			.unwrap();
-		self.panel_shell_grab_ball
-			.connect_root()
-			.set_position(None, [0.0, -self.surface.physical_size().y * 0.5, 0.0])
-			.unwrap();
-		self.close_button.resize(&self.surface);
 	}
 
 	fn new_child(&mut self, uid: &str, info: ChildInfo) {

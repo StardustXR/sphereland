@@ -1,43 +1,29 @@
+use crate::toplevel::Toplevel;
 use rustc_hash::FxHashMap;
 use stardust_xr_fusion::{
 	client::FrameInfo,
-	fields::UnknownField,
 	items::{
 		panel::{PanelItem, PanelItemInitData},
-		ItemAcceptor, ItemAcceptorHandler, ItemUIHandler,
+		ItemAcceptorHandler, ItemUIHandler,
 	},
 	node::NodeType,
 	HandlerWrapper,
 };
 
-use crate::toplevel::Toplevel;
-
-pub struct Flatland {
+pub struct Sphereland {
 	panel_items: FxHashMap<String, HandlerWrapper<PanelItem, Toplevel>>,
 }
-impl Flatland {
+impl Sphereland {
 	pub fn new() -> Self {
-		Flatland {
+		Sphereland {
 			panel_items: FxHashMap::default(),
 		}
 	}
 
-	pub fn frame(
-		&mut self,
-		info: FrameInfo,
-		acceptors: &FxHashMap<String, (ItemAcceptor<PanelItem>, UnknownField)>,
-	) {
+	pub fn frame(&mut self, info: FrameInfo) {
 		for item in self.panel_items.values() {
-			item.lock_wrapped().update(&info, acceptors);
+			item.lock_wrapped().update(&info);
 		}
-		// let items = self.panel_items.items();
-		// let focus = items
-		// 	.iter()
-		// 	.map(|(_, wrapper)| (wrapper, wrapper.lock_inner().step()))
-		// 	.reduce(|a, b| if a.1 > b.1 { b } else { a });
-		// if let Some((focus, _)) = focus {
-		// 	self.focused = focus.weak_wrapped();
-		// }
 	}
 
 	fn add_item(&mut self, uid: &str, item: PanelItem, init_data: PanelItemInitData) {
@@ -51,7 +37,7 @@ impl Flatland {
 		self.panel_items.remove(uid);
 	}
 }
-impl ItemUIHandler<PanelItem> for Flatland {
+impl ItemUIHandler<PanelItem> for Sphereland {
 	fn item_created(&mut self, uid: &str, item: PanelItem, init_data: PanelItemInitData) {
 		self.add_item(uid, item, init_data);
 	}
@@ -70,7 +56,7 @@ impl ItemUIHandler<PanelItem> for Flatland {
 		toplevel.lock_wrapped().set_enabled(true);
 	}
 }
-impl ItemAcceptorHandler<PanelItem> for Flatland {
+impl ItemAcceptorHandler<PanelItem> for Sphereland {
 	fn captured(&mut self, uid: &str, item: PanelItem, init_data: PanelItemInitData) {
 		self.add_item(uid, item, init_data);
 	}

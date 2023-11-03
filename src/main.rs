@@ -1,6 +1,6 @@
 use color_eyre::eyre::{bail, Result};
-use flatland::Flatland;
 use manifest_dir_macros::directory_relative_path;
+use sphereland::Sphereland;
 use stardust_xr_fusion::{
 	client::{Client, ClientState, FrameInfo, RootHandler},
 	items::{panel::PanelItem, ItemUI},
@@ -9,28 +9,22 @@ use stardust_xr_fusion::{
 use std::sync::Arc;
 use tracing_subscriber::EnvFilter;
 
-pub mod close_button;
-pub mod cursor;
-pub mod flatland;
-pub mod panel_shell_grab_ball;
+pub mod sphereland;
 pub mod surface;
 pub mod toplevel;
 
 struct Root {
-	flatland: HandlerWrapper<ItemUI<PanelItem>, Flatland>,
+	sphereland: HandlerWrapper<ItemUI<PanelItem>, Sphereland>,
 }
 impl Root {
 	fn new(client: Arc<Client>) -> Result<Self> {
-		let flatland = ItemUI::register(&client)?.wrap(Flatland::new())?;
-		Ok(Root { flatland })
+		let sphereland = ItemUI::register(&client)?.wrap(Sphereland::new())?;
+		Ok(Root { sphereland })
 	}
 }
 impl RootHandler for Root {
 	fn frame(&mut self, info: FrameInfo) {
-		let item_ui = self.flatland.node().clone();
-		self.flatland
-			.lock_wrapped()
-			.frame(info, &*item_ui.acceptors());
+		self.sphereland.lock_wrapped().frame(info);
 	}
 	fn save_state(&mut self) -> ClientState {
 		ClientState::default()

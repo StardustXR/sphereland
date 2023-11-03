@@ -6,7 +6,7 @@
 
   outputs = { self, nixpkgs, fenix }:
     let
-      name = "flatland";
+      name = "sphereland";
       pkgs = system: import nixpkgs {
         inherit system;
       };

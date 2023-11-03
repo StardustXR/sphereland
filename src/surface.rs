@@ -1,7 +1,8 @@
+use std::sync::Arc;
+
 use glam::{vec2, vec3, Vec2};
 use lazy_static::lazy_static;
 use mint::Vector2;
-use rustc_hash::FxHashSet;
 use stardust_xr_fusion::{
 	core::values::Transform,
 	drawable::{Model, ResourceID},
@@ -15,20 +16,16 @@ use stardust_xr_molecules::{
 	keyboard::{create_keyboard_panel_handler, KeyboardPanelHandler},
 	touch_plane::TouchPlane,
 };
-use std::{
-	collections::hash_map::DefaultHasher,
-	hash::{Hash, Hasher},
-	sync::Arc,
-};
 
 lazy_static! {
-	pub static ref PANEL_RESOURCE: ResourceID = ResourceID::new_namespaced("flatland", "panel");
+	pub static ref PANEL_RESOURCE: ResourceID = ResourceID::new_namespaced("sphereland", "panel");
 }
 
-fn hash_input_data(input_data: &InputData) -> u32 {
-	let mut hasher = DefaultHasher::new();
-	input_data.uid.hash(&mut hasher);
-	hasher.finish() as u32
+fn pointer_filter(i: &&Arc<InputData>) -> bool {
+	match &i.input {
+		InputDataType::Pointer(_) => true,
+		_ => false,
+	}
 }
 
 // Pixels per meter, screen density
@@ -41,7 +38,6 @@ pub struct Surface {
 	thickness: f32,
 	model: Model,
 	pub touch_plane: TouchPlane,
-	touches: FxHashSet<Arc<InputData>>,
 	keyboard: KeyboardPanelHandler,
 	physical_size: Vec2,
 }
@@ -89,7 +85,6 @@ impl Surface {
 			thickness,
 			model,
 			touch_plane,
-			touches: FxHashSet::default(),
 			keyboard,
 			physical_size,
 		})
@@ -120,71 +115,18 @@ impl Surface {
 	pub fn update(&mut self) {
 		self.touch_plane.update();
 
-		// proper touches
-		for input_data in self
-			.touch_plane
-			.started_inputs()
-			.into_iter()
-			.filter(|t| match t.input {
-				InputDataType::Hand(_) => true,
-				_ => false,
-			}) {
-			self.touches.insert(input_data.clone());
-			let uid = hash_input_data(input_data);
-			let position = self.touch_plane.interact_point(&input_data).0;
-			let _ = self.item.touch_down(&self.id, uid, position);
-		}
-		for input_data in self
-			.touch_plane
-			.interacting_inputs()
-			.into_iter()
-			.filter(|t| match t.input {
-				InputDataType::Hand(_) => true,
-				_ => false,
-			}) {
-			if !self.touches.contains(input_data) {
-				return;
-			}
-			let uid = hash_input_data(input_data);
-			let position = self.touch_plane.interact_point(&input_data).0;
-			let _ = self.item.touch_move(uid, position);
-		}
-		for input_data in self
-			.touch_plane
-			.stopped_inputs()
-			.into_iter()
-			.filter(|t| match t.input {
-				InputDataType::Hand(_) => true,
-				_ => false,
-			}) {
-			self.touches.remove(input_data);
-			let uid = hash_input_data(input_data);
-			let _ = self.item.touch_up(uid);
-		}
-
 		// "touches" but actually use the pointer instead
 		if let Some(closest_hover) = self
 			.touch_plane
 			.hovering_inputs()
 			.into_iter()
 			.chain(self.touch_plane.interacting_inputs())
-			.filter(|i| match i.input {
-				InputDataType::Hand(_) => false,
-				_ => true,
-			})
+			.filter(pointer_filter)
 			.reduce(|a, b| if a.distance > b.distance { b } else { a })
 		{
 			let (interact_point, _depth) = self.touch_plane.interact_point(closest_hover);
 			self.item.pointer_motion(&self.id, interact_point).unwrap();
-		}
-
-		for input in self
-			.touch_plane
-			.hovering_inputs()
-			.into_iter()
-			.chain(self.touch_plane.interacting_inputs())
-		{
-			let scroll_continous = input.datamap.with_data(|r| {
+			let scroll_continous = closest_hover.datamap.with_data(|r| {
 				let scroll_continous = r.index("scroll_continous").ok()?.as_vector();
 				Some(
 					[
@@ -194,7 +136,7 @@ impl Surface {
 					.into(),
 				)
 			});
-			let scroll_discrete = input.datamap.with_data(|r| {
+			let scroll_discrete = closest_hover.datamap.with_data(|r| {
 				let scroll_discrete = r.index("scroll_discrete").ok()?.as_vector();
 				Some(
 					[
@@ -207,6 +149,17 @@ impl Surface {
 			self.item
 				.pointer_scroll(&self.id, scroll_continous, scroll_discrete)
 				.unwrap();
+		}
+
+		if let Some(closest_interacting) = self
+			.touch_plane
+			.interacting_inputs()
+			.into_iter()
+			.filter(pointer_filter)
+			.reduce(|a, b| if a.distance > b.distance { b } else { a })
+		{
+			let (interact_point, _depth) = self.touch_plane.interact_point(closest_interacting);
+			self.item.pointer_motion(&self.id, interact_point).unwrap();
 		}
 
 		if self.touch_plane.touch_started() {
