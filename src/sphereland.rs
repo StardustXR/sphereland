@@ -1,7 +1,7 @@
 use crate::toplevel::Toplevel;
 use rustc_hash::FxHashMap;
 use stardust_xr_fusion::{
-	client::FrameInfo,
+	client::{ClientState, FrameInfo, RootHandler},
 	items::{
 		panel::{PanelItem, PanelItemInitData},
 		ItemAcceptorHandler, ItemUIHandler,
@@ -19,13 +19,6 @@ impl Sphereland {
 			panel_items: FxHashMap::default(),
 		}
 	}
-
-	pub fn frame(&mut self, info: FrameInfo) {
-		for item in self.panel_items.values() {
-			item.lock_wrapped().update(&info);
-		}
-	}
-
 	fn add_item(&mut self, uid: &str, item: PanelItem, init_data: PanelItemInitData) {
 		let Ok(toplevel) = Toplevel::create(item.alias(), init_data) else {return};
 		let handler = item.wrap(toplevel).unwrap();
@@ -35,6 +28,16 @@ impl Sphereland {
 	}
 	fn remove_item(&mut self, uid: &str) {
 		self.panel_items.remove(uid);
+	}
+}
+impl RootHandler for Sphereland {
+	fn frame(&mut self, info: FrameInfo) {
+		for item in self.panel_items.values() {
+			item.lock_wrapped().update(&info);
+		}
+	}
+	fn save_state(&mut self) -> ClientState {
+		ClientState::default()
 	}
 }
 impl ItemUIHandler<PanelItem> for Sphereland {

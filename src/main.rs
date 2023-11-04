@@ -1,35 +1,12 @@
 use color_eyre::eyre::{bail, Result};
 use manifest_dir_macros::directory_relative_path;
 use sphereland::Sphereland;
-use stardust_xr_fusion::{
-	client::{Client, ClientState, FrameInfo, RootHandler},
-	items::{panel::PanelItem, ItemUI},
-	HandlerWrapper,
-};
-use std::sync::Arc;
+use stardust_xr_fusion::{client::Client, items::ItemUI};
 use tracing_subscriber::EnvFilter;
 
 pub mod sphereland;
 pub mod surface;
 pub mod toplevel;
-
-struct Root {
-	sphereland: HandlerWrapper<ItemUI<PanelItem>, Sphereland>,
-}
-impl Root {
-	fn new(client: Arc<Client>) -> Result<Self> {
-		let sphereland = ItemUI::register(&client)?.wrap(Sphereland::new())?;
-		Ok(Root { sphereland })
-	}
-}
-impl RootHandler for Root {
-	fn frame(&mut self, info: FrameInfo) {
-		self.sphereland.lock_wrapped().frame(info);
-	}
-	fn save_state(&mut self) -> ClientState {
-		ClientState::default()
-	}
-}
 
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> Result<()> {
@@ -40,7 +17,8 @@ async fn main() -> Result<()> {
 	let (client, event_loop) = Client::connect_with_async_loop().await?;
 	client.set_base_prefixes(&[directory_relative_path!("res")]);
 
-	let _wrapped_root = client.wrap_root(Root::new(client.clone())?);
+	let sphereland = ItemUI::register(&client)?.wrap(Sphereland::new())?;
+	client.wrap_root_raw(sphereland.wrapped())?;
 
 	tokio::select! {
 		_ = tokio::signal::ctrl_c() => Ok(()),
