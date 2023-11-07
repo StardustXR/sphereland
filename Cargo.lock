@@ -1243,7 +1243,7 @@ dependencies = [
 [[package]]
 name = "stardust-xr-molecules"
 version = "0.29.0"
-source = "git+https://github.com/StardustXR/molecules.git#900faf23d0ce5f7f93caaba6d84e82ad3fee4ba9"
+source = "git+https://github.com/StardustXR/molecules.git#55c108d9a717df5265ac02306264b1bf64e758fc"
 dependencies = [
  "color-rs",
  "glam",

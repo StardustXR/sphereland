@@ -51,7 +51,7 @@ impl Toplevel {
 				linear_momentum: None,
 				angular_momentum: None,
 				magnet: true,
-				pointer_mode: PointerMode::Move,
+				pointer_mode: PointerMode::Align,
 				max_distance: 0.0254,
 				..Default::default()
 			},
@@ -95,7 +95,9 @@ impl Toplevel {
 		let item_alias = item.alias();
 		let future = item.get_position_rotation_scale(client.get_root())?;
 		tokio::spawn(async move {
-			let Ok((position, _, _)) = future.await else {return};
+			let Ok((position, _, _)) = future.await else {
+				return;
+			};
 			let position = Vec3::from(position);
 			// if the distance between the panel item and the client origin is basically nothing, it must be unpositioned
 			if position.length_squared() < 0.01 {
@@ -197,7 +199,9 @@ impl PanelItemHandler for Toplevel {
 		let _ = self.surface.touch_plane.set_enabled(false);
 	}
 	fn reposition_child(&mut self, uid: &str, geometry: Geometry) {
-		let Some(child) = self.children.get_mut(uid) else {return};
+		let Some(child) = self.children.get_mut(uid) else {
+			return;
+		};
 		child.set_offset(geometry.origin).unwrap();
 		child.resize(geometry.size).unwrap();
 	}

@@ -119,7 +119,7 @@ impl Surface {
 		if let Some(closest_hover) = self
 			.touch_plane
 			.hovering_inputs()
-			.into_iter()
+			.iter()
 			.chain(self.touch_plane.interacting_inputs())
 			.filter(pointer_filter)
 			.reduce(|a, b| if a.distance > b.distance { b } else { a })
